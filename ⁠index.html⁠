@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة بلاغات المنشآت</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary: #0f766e; --primary-dark: #115e59; --bg: #f8fafc; --text: #1e293b; }
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: var(--bg); margin: 0; padding: 20px; color: var(--text); }
+        .container { max-width: 750px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        h1 { color: var(--primary); text-align: center; margin-bottom: 25px; font-size: 24px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 14px; background: #f8fafc; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); background: #fff; }
+        button { background-color: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; transition: background 0.2s; }
+        button:hover { background-color: var(--primary-dark); }
+        .report-card { background: #fff; border: 1px solid #e2e8f0; border-right: 5px solid var(--primary); padding: 18px; margin-top: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .report-card h3 { margin: 0 0 8px 0; font-size: 16px; color: #0f172a; }
+        .report-card p { margin: 0 0 10px 0; color: #475569; font-size: 14px; line-height: 1.5; }
+        .badge { display: inline-block; background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        hr { border: none; border-top: 1px solid #e2e8f0; margin: 30px 0; }
+        .loading { text-align: center; color: #64748b; padding: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>منصة بلاغات المنشآت</h1>
+    
+    <div class="form-group">
+        <label>عنوان البلاغ</label>
+        <input type="text" id="title" placeholder="أدخل عنوان البلاغ باختصار">
+    </div>
+    
+    <div class="form-group">
+        <label>الجهة المختصة</label>
+        <select id="category">
+            <option value="البلدية">البلدية</option>
+            <option value="التجارة">التجارة</option>
+            <option value="الموارد البشرية">الموارد البشرية</option>
+            <option value="الدفاع المدني">الدفاع المدني</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>تفاصيل البلاغ</label>
+        <textarea id="description" rows="3" placeholder="اشرح المشكلة بالتفصيل..."></textarea>
+    </div>
+    
+    <button onclick="submitReport()">إرسال البلاغ للنظام</button>
+
+    <hr>
+
+    <h2>البلاغات المسجلة في النظام</h2>
+    <div id="reportsList" class="loading">جاري تحميل البلاغات...</div>
+</div>
+
+<script>
+    const SUPABASE_URL = 'https://xyzcompany.supabase.co'; 
+    const SUPABASE_KEY = 'public-anon-key-here'; 
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    async function loadReports() {
+        const { data, error } = await _supabase.from('reports').select('*').order('created_at', { ascending: false });
+        const listDiv = document.getElementById('reportsList');
+        
+        if (error || !data || data.length === 0) {
+            listDiv.innerHTML = '<p style="text-align:center; color:#64748b;">لا توجد بلاغات مسجلة حالياً. كن أول من يضيف بلاغ!</p>';
+            return;
+        }
+
+        listDiv.innerHTML = '';
+        data.forEach(r => {
+            listDiv.innerHTML += `
+                <div class="report-card">
+                    <h3>📌 ${r.title} <span style="float: left; font-size: 12px; color: #64748b;">(${r.category})</span></h3>
+                    <p>${r.description}</p>
+                    <span class="badge">الحالة: ${r.status || 'قيد المراجعة'}</span>
+                </div>
+            `;
+        });
+    }
+
+    async function submitReport() {
+        const title = document.getElementById('title').value.trim();
+        const category = document.getElementById('category').value;
+        const description = document.getElementById('description').value.trim();
+
+        if(!title || !description) {
+            alert('الرجاء تعبئة جميع الحقول المطلوبة');
+            return;
+        }
+
+        const { error } = await _supabase.from('reports').insert([
+            { title, category, description, status: 'جديد' }
+        ]);
+
+        if (error) {
+            alert('حدث خطأ أثناء الإرسال');
+        } else {
+            alert('تم إرسال البلاغ وحفظه بنجاح!');
+            document.getElementById('title').value = '';
+            document.getElementById('description').value = '';
+            loadReports();
+        }
+    }
+
+    loadReports();
+</script>
+
+</body>
+</html>
